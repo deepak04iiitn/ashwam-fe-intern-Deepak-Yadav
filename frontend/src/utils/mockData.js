@@ -56,8 +56,8 @@ export const symptomOptions = [
 
 export const portionSizes = [
     { value: 'small', label: 'Small', icon: '🥄' },
-    { value: 'medium', label: 'Medium', icon: '🍽️' },
-    { value: 'large', label: 'Large', icon: '🍲' },
+    { value: 'medium', label: 'Medium', icon: '🍛' },
+    { value: 'large', label: 'Large', icon: '🍽️' },
     { value: 'skip', label: 'Skip', icon: '⏭️' },
     { value: 'no-idea', label: 'No idea', icon: '🤷' }
 ];
