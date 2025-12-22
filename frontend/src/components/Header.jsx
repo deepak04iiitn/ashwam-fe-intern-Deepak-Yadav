@@ -1,14 +1,10 @@
 import React from 'react';
 import { Utensils, Calendar } from 'lucide-react';
+import { formatDate } from '../utils/DateFormatter';
 
 export default function Header() {
 
-  const today = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
+  const today = formatDate();
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -36,7 +32,7 @@ export default function Header() {
 
         </div>
       </div>
-      
+
     </header>
   );
 }
