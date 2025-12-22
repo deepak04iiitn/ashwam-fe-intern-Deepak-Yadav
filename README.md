@@ -208,7 +208,7 @@ Right now everything is in `localStorage`. If/when a backend exists, this is the
 
 ---
 
-### If I had 2 more hours (as a student)
+### If I had 2 more hours 
 
 - **Add basic analytics / history view** to browse previous days, trends in symptoms vs meals, and a simple “calendar” summary.
 - **Improve parsing & UX** for food input (autocomplete from `commonFoods`, better natural-language parsing, per-item quantities).
