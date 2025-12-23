@@ -14,6 +14,30 @@ Users can:
 
 ---
 
+### How to Run Locally
+
+1. **Clone the project**
+   ```bash
+   git clone <repository-url>
+   ```
+
+2. **Navigate to frontend directory**
+   ```bash
+   cd frontend
+   ```
+
+3. **Install dependencies**
+   ```bash
+   npm i
+   ```
+
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+---
+
 ### Assumptions
 
 - **Single user & single day focus**: Only today’s meals are stored; no multi-user or history UI.
@@ -80,23 +104,233 @@ Users can:
 
 ### State & data flow
 
-- **Top-level state**: `Meals.jsx` holds a `meals` object keyed by `breakfast`, `lunch`, `dinner`, `snacks`.
-- **Initialization**:
-  - `initializeMealState` → checks `loadMealsFromStorage()` for today’s date.
-  - If present and date matches today, use stored meals; otherwise create a fresh per-meal state.
-- **Updates**:
-  - All user actions in children (`MealCard`, selectors, chips) call callbacks from `Meals.jsx`.
-  - Those callbacks call pure functions in `mealState.js` with `setMeals(prev => fn(prev, ...))`.
-  - Each function returns a new `meals` object and writes it through `saveMealsToStorage`.
-- **Derived fields**:
-  - `parsedFoods` is derived from free-text via `parseFoodItems`.
-  - `showPortionSelection` is controlled based on whether there are parsed foods and the meal is not skipped.
+This section explains how data moves through the app, from user input to storage and back.
+
+#### Where the state lives
+
+All meal data is stored in a single React state object in `Meals.jsx`. The structure looks like this:
+
+```javascript
+meals = {
+  breakfast: {
+    isExpanded: false,
+    isSkipped: false,
+    foodItems: "2 ragi rotis, green moong dal",
+    parsedFoods: [
+      { id: "food-1", name: "2 ragi rotis", portion: "small" },
+      { id: "food-2", name: "green moong dal", portion: "medium" }
+    ],
+    feeling: "light",
+    symptoms: ["none"],
+    note: ""
+  },
+  lunch: { /* same structure */ },
+  dinner: { /* same structure */ },
+  snacks: { /* same structure */ }
+}
+```
+
+#### App initialization (when the page loads)
+
+1. **Check localStorage**: The app first checks if we have any saved meals for today using `loadMealsFromStorage()`.
+2. **Load or create**: 
+   - If saved meals exist for today → uses them to populate the state
+   - If no saved meals exist → creates a fresh empty state for all meals
+3. **Display**: The UI renders based on this initial state
+
+**Example flow:**
+```
+Page loads → Check localStorage → Found today's breakfast? 
+  → Yes: Load it → Display saved data
+  → No: Create empty state → Display empty meal cards
+```
+
+#### How updates work (when user interacts)
+
+When user interact with the app (type text, select a feeling, etc.), here's what happens:
+
+1. **User action**: User click a button or type in a field (e.g., type "rice, dal" in the lunch text area)
+2. **Component callback**: The child component (`MealCard`, `FeelingSelector`, etc.) calls a callback function passed down from `Meals.jsx`
+3. **State update function**: The callback calls a pure function from `mealState.js` (like `handleFoodInputChange()`)
+4. **Create new state**: The function creates a **new** meals object (React requires immutability) with user's changes
+5. **Save to storage**: The new state is automatically saved to `localStorage` so it persists
+6. **UI re-renders**: React detects the state change and updates the UI
+
+**Example flow:**
+```
+User types "rice, dal" in lunch text area
+  ↓
+MealCard calls onFoodChange("rice, dal")
+  ↓
+Meals.jsx calls handleFoodInputChange(meals, "lunch", "rice, dal")
+  ↓
+Function creates new meals object with updated lunch.foodItems
+  ↓
+Function parses "rice, dal" into parsedFoods array
+  ↓
+Function saves new state to localStorage
+  ↓
+React re-renders → UI shows "rice, dal" and portion selectors appear
+```
+
+#### Derived fields (computed values)
+
+Some values are automatically calculated from other data:
+
+- **`parsedFoods`**: When we type food items (e.g., "rice, dal, salad"), the app automatically splits this text by commas and creates an array of food objects. This happens every time the text changes.
+- **`showPortionSelection`**: The portion selector buttons only appear when:
+  - There are parsed food items (we've typed something)
+  - The meal is not skipped
+
+**Example:**
+```
+User types: "rice, dal"
+  ↓
+parseFoodItems() automatically creates:
+  [
+    { id: "food-1", name: "rice", portion: null },
+    { id: "food-2", name: "dal", portion: null }
+  ]
+  ↓
+showPortionSelection becomes true (because parsedFoods.length > 0)
+  ↓
+UI shows portion buttons for "rice" and "dal"
+```
+
+#### Data persistence
+
+Every time the state changes, it's automatically saved to `localStorage` under the key `nutrilog_meals`. This means:
+- Our data survives page refreshes
+- If we close the browser and come back later (same day), our meals are still there
+- Data is stored per day (if we come back tomorrow, we'll see a fresh state)
+
+**Important**: The app only stores today's meals. Previous days are not kept in storage (this is by design for the current version).
 
 ---
 
 ### Proposed REST APIs (future backend)
 
 Right now everything is in `localStorage`. If/when a backend exists, this is the API contract I would expect.
+
+#### Authentication APIs
+
+- **`POST /api/auth/register`**
+  - **Purpose**: Register a new user account.
+  - **Request**:
+    - Headers: `Content-Type: application/json`
+    - Body:
+      ```json
+      {
+        "email": "user@example.com",
+        "password": "securePassword123",
+        "name": "John Doe"
+      }
+      ```
+  - **Response 201**:
+    ```json
+    {
+      "status": "created",
+      "user": {
+        "id": "user-123",
+        "email": "user@example.com",
+        "name": "John Doe"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "refresh_token_here"
+    }
+    ```
+  - **Errors**:
+    - `400` – invalid payload (missing fields, invalid email format, weak password).
+    - `409` – email already exists.
+
+- **`POST /api/auth/login`**
+  - **Purpose**: Authenticate user and receive access token.
+  - **Request**:
+    - Headers: `Content-Type: application/json`
+    - Body:
+      ```json
+      {
+        "email": "user@example.com",
+        "password": "securePassword123"
+      }
+      ```
+  - **Response 200**:
+    ```json
+    {
+      "status": "ok",
+      "user": {
+        "id": "user-123",
+        "email": "user@example.com",
+        "name": "John Doe"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "refresh_token_here",
+      "expiresIn": 3600
+    }
+    ```
+  - **Errors**:
+    - `400` – invalid payload (missing email or password).
+    - `401` – invalid credentials.
+
+- **`POST /api/auth/logout`**
+  - **Purpose**: Logout user and invalidate refresh token.
+  - **Request**:
+    - Headers: `Authorization: Bearer <token>`
+    - Body (optional):
+      ```json
+      {
+        "refreshToken": "refresh_token_here"
+      }
+      ```
+  - **Response 200**:
+    ```json
+    {
+      "status": "ok",
+      "message": "Logged out successfully"
+    }
+    ```
+  - **Errors**:
+    - `401` – not authenticated.
+
+- **`POST /api/auth/refresh`**
+  - **Purpose**: Refresh access token using refresh token.
+  - **Request**:
+    - Headers: `Content-Type: application/json`
+    - Body:
+      ```json
+      {
+        "refreshToken": "refresh_token_here"
+      }
+      ```
+  - **Response 200**:
+    ```json
+    {
+      "status": "ok",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "expiresIn": 3600
+    }
+    ```
+  - **Errors**:
+    - `400` – missing or invalid refresh token.
+    - `401` – refresh token expired or invalid.
+
+- **`GET /api/auth/me`**
+  - **Purpose**: Get current authenticated user's information.
+  - **Request**:
+    - Headers: `Authorization: Bearer <token>`
+  - **Response 200**:
+    ```json
+    {
+      "id": "user-123",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "createdAt": "2025-01-15T10:30:00Z"
+    }
+    ```
+  - **Errors**:
+    - `401` – not authenticated or token expired.
+
+#### Meals APIs
 
 - **`GET /api/meals/today`**
   - **Purpose**: Fetch the authenticated user’s meals for today (or a specific date).
@@ -151,6 +385,7 @@ Right now everything is in `localStorage`. If/when a backend exists, this is the
 - **`GET /api/meals/history`**
   - **Purpose**: (Future) Fetch a paginated list of past days with some summary stats.
   - **Request**:
+    - Headers: `Authorization: Bearer <token>`
     - Query params: `page`, `pageSize`, optional `fromDate`, `toDate`.
   - **Response 200** (example shape):
     ```json
@@ -164,9 +399,13 @@ Right now everything is in `localStorage`. If/when a backend exists, this is the
       "total": 42
     }
     ```
+  - **Errors**:
+    - `401` – not authenticated.
 
 - **`GET /api/smart-defaults`**
   - **Purpose**: Fetch user-specific smart defaults for each meal type.
+  - **Request**:
+    - Headers: `Authorization: Bearer <token>`
   - **Response 200**:
     ```json
     {
@@ -176,10 +415,14 @@ Right now everything is in `localStorage`. If/when a backend exists, this is the
       "snacks": [ "Fruits (apple and banana)" ]
     }
     ```
+  - **Errors**:
+    - `401` – not authenticated.
 
 - **`POST /api/smart-defaults`**
   - **Purpose**: Add a new smart default for a meal type.
-  - **Request body**:
+  - **Request**:
+    - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+    - Body:
     ```json
     {
       "mealType": "breakfast",
@@ -190,6 +433,9 @@ Right now everything is in `localStorage`. If/when a backend exists, this is the
     ```json
     { "status": "created" }
     ```
+  - **Errors**:
+    - `400` – invalid payload (missing mealType or text).
+    - `401` – not authenticated.
 
 ---
 
@@ -203,8 +449,6 @@ Right now everything is in `localStorage`. If/when a backend exists, this is the
   `parseFoodItems` uses `Date.now()` + index; very fast repeated edits could theoretically collide, though it’s unlikely in normal use.
 - **No backend validation**:  
   With only client-side storage, there is no server-side validation, deduplication, or cross-device sync.
-- **Very large text inputs**:  
-  Extremely long meal descriptions or many items may make the UI scroll-heavy and could impact performance in older browsers.
 
 ---
 
