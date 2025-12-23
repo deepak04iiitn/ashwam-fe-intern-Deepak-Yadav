@@ -208,8 +208,8 @@ Right now everything is in `localStorage`. If/when a backend exists, this is the
 
 ---
 
-### If I had 2 more hours 
+### If I had 2 more hours, I would:
 
 - **Add basic analytics / history view** to browse previous days, trends in symptoms vs meals, and a simple “calendar” summary.
-- **Improve parsing & UX** for food input (autocomplete from `commonFoods`, better natural-language parsing, per-item quantities).
+- **Add authentication** so that users can authenticate themselves and meals can be tracked per user.
 - **Add backend integration** so data is synced to a real API while still using `localStorage` as a cache.
