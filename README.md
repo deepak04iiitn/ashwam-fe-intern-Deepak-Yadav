@@ -449,3 +449,10 @@ Right now everything is in `localStorage`. If/when a backend exists, these are t
 - **Add basic analytics / history view** to browse previous days, trends in symptoms vs meals, and a simple “calendar” summary.
 - **Add authentication** so that users can authenticate themselves and meals can be tracked per user.
 - **Add backend integration** so data is synced to a real API while still using `localStorage` as a cache.
+
+---
+
+### Internship availability (college commitments)
+
+- **Mid-semester exams**: Unavailable from **17th Feb to 27th Feb** (inclusive).
+- **End-semester exams**: Unavailable from **3th May to 13th May** (inclusive).
