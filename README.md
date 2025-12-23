@@ -210,232 +210,224 @@ Every time the state changes, it's automatically saved to `localStorage` under t
 
 ### Proposed REST APIs (future backend)
 
-Right now everything is in `localStorage`. If/when a backend exists, this is the API contract I would expect.
+Right now everything is in `localStorage`. If/when a backend exists, these are the APIs I would expect to use.
 
-#### Authentication APIs
+#### Authentication APIs (if auth is added later)
 
-- **`POST /api/auth/register`**
-  - **Purpose**: Register a new user account.
-  - **Request**:
-    - Headers: `Content-Type: application/json`
-    - Body:
-      ```json
-      {
-        "email": "user@example.com",
-        "password": "securePassword123",
-        "name": "John Doe"
-      }
-      ```
-  - **Response 201**:
-    ```json
-    {
-      "status": "created",
-      "user": {
-        "id": "user-123",
-        "email": "user@example.com",
-        "name": "John Doe"
-      },
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "refreshToken": "refresh_token_here"
-    }
-    ```
-  - **Errors**:
-    - `400` – invalid payload (missing fields, invalid email format, weak password).
-    - `409` – email already exists.
+1. **Register a new user**
+   - **Endpoint**: `POST /api/auth/register`
+   - **Purpose**: Create a new user so meals can be stored per account instead of per browser.
+   - **Request body**:
+     ```json
+     {
+       "email": "user@example.com",
+       "password": "StrongPassword123",
+       "name": "Jane Doe"
+     }
+     ```
+   - **Response**:
+     - `201 Created` with:
+       ```json
+       {
+         "user": {
+           "id": "user-123",
+           "email": "user@example.com",
+           "name": "Jane Doe"
+         },
+         "token": "jwt-token-here",
+         "refreshToken": "refresh-token-here"
+       }
+       ```
+   - **Error cases**:
+     - `400` invalid payload (missing fields, bad email, weak password), `409` email already exists.
 
-- **`POST /api/auth/login`**
-  - **Purpose**: Authenticate user and receive access token.
-  - **Request**:
-    - Headers: `Content-Type: application/json`
-    - Body:
-      ```json
-      {
-        "email": "user@example.com",
-        "password": "securePassword123"
-      }
-      ```
-  - **Response 200**:
-    ```json
-    {
-      "status": "ok",
-      "user": {
-        "id": "user-123",
-        "email": "user@example.com",
-        "name": "John Doe"
-      },
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "refreshToken": "refresh_token_here",
-      "expiresIn": 3600
-    }
-    ```
-  - **Errors**:
-    - `400` – invalid payload (missing email or password).
-    - `401` – invalid credentials.
+2. **Login**
+   - **Endpoint**: `POST /api/auth/login`
+   - **Purpose**: Authenticate an existing user and issue tokens.
+   - **Request body**:
+     ```json
+     {
+       "email": "user@example.com",
+       "password": "StrongPassword123"
+     }
+     ```
+   - **Response**:
+     - `200 OK` with:
+       ```json
+       {
+         "user": {
+           "id": "user-123",
+           "email": "user@example.com",
+           "name": "Jane Doe"
+         },
+         "token": "jwt-token-here",
+         "refreshToken": "refresh-token-here",
+         "expiresIn": 3600
+       }
+       ```
+   - **Error cases**:
+     - `400` invalid payload, `401` invalid credentials.
 
-- **`POST /api/auth/logout`**
-  - **Purpose**: Logout user and invalidate refresh token.
-  - **Request**:
-    - Headers: `Authorization: Bearer <token>`
-    - Body (optional):
-      ```json
-      {
-        "refreshToken": "refresh_token_here"
-      }
-      ```
-  - **Response 200**:
-    ```json
-    {
-      "status": "ok",
-      "message": "Logged out successfully"
-    }
-    ```
-  - **Errors**:
-    - `401` – not authenticated.
+3. **Refresh access token**
+   - **Endpoint**: `POST /api/auth/refresh`
+   - **Purpose**: Issue a new access token when the old one expires.
+   - **Request body**:
+     ```json
+     {
+       "refreshToken": "refresh-token-here"
+     }
+     ```
+   - **Response**:
+     - `200 OK` with:
+       ```json
+       {
+         "token": "new-jwt-token-here",
+         "expiresIn": 3600
+       }
+       ```
+   - **Error cases**:
+     - `400` missing/invalid refresh token, `401` expired or revoked refresh token.
 
-- **`POST /api/auth/refresh`**
-  - **Purpose**: Refresh access token using refresh token.
-  - **Request**:
-    - Headers: `Content-Type: application/json`
-    - Body:
-      ```json
-      {
-        "refreshToken": "refresh_token_here"
-      }
-      ```
-  - **Response 200**:
-    ```json
-    {
-      "status": "ok",
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "expiresIn": 3600
-    }
-    ```
-  - **Errors**:
-    - `400` – missing or invalid refresh token.
-    - `401` – refresh token expired or invalid.
+4. **Get current user**
+   - **Endpoint**: `GET /api/auth/me`
+   - **Purpose**: Fetch the profile of the currently authenticated user.
+   - **Request**:
+     - Header: `Authorization: Bearer <token>`
+   - **Response**:
+     - `200 OK` with:
+       ```json
+       {
+         "id": "user-123",
+         "email": "user@example.com",
+         "name": "Jane Doe",
+         "createdAt": "2025-01-15T10:30:00Z"
+       }
+       ```
+   - **Error cases**:
+     - `401` not authenticated or token expired.
 
-- **`GET /api/auth/me`**
-  - **Purpose**: Get current authenticated user's information.
-  - **Request**:
-    - Headers: `Authorization: Bearer <token>`
-  - **Response 200**:
-    ```json
-    {
-      "id": "user-123",
-      "email": "user@example.com",
-      "name": "John Doe",
-      "createdAt": "2025-01-15T10:30:00Z"
-    }
-    ```
-  - **Errors**:
-    - `401` – not authenticated or token expired.
+#### Meal & logging APIs
 
-#### Meals APIs
+1. **Save or update daily meals for a date**
+   - **Endpoint**: `PUT /api/users/{userId}/meals/{date}`
+   - **Purpose**: Persist the full meal log for a specific user and date.
+   - **Request body (example shape)**:
+     ```json
+     {
+       "date": "2025-12-23",
+       "meals": {
+         "breakfast": { "...": "..." },
+         "lunch": { "...": "..." },
+         "dinner": { "...": "..." },
+         "snacks": { "...": "..." }
+       }
+     }
+     ```
+     **Each meal**:
+     ```json
+     {
+       "isSkipped": false,
+       "foodItems": "2 ragi rotis, green moong dal, cucumber salad",
+       "parsedFoods": [
+         { "id": "food-1", "name": "2 ragi rotis", "portion": "small" },
+         { "id": "food-2", "name": "green moong dal", "portion": "medium" }
+       ],
+       "feeling": "light",
+       "symptoms": ["none"],
+       "note": ""
+     }
+     ```
+   - **Response**:
+     - `200 OK` with saved object (including server IDs/timestamps) or `201 Created` if new.
+   - **Error cases**:
+     - `400` invalid date/payload, `401`/`403` auth errors, `409` if conflicting concurrent updates, `500` internal errors.
 
-- **`GET /api/meals/today`**
-  - **Purpose**: Fetch the authenticated user’s meals for today (or a specific date).
-  - **Request**:
-    - Headers: `Authorization: Bearer <token>`
-    - Query params (optional): `date=YYYY-MM-DD` (defaults to today).
-  - **Response 200**:
-    ```json
-    {
-      "date": "2025-12-22",
-      "meals": {
-        "breakfast": {
-          "isSkipped": false,
-          "foodItems": "2 ragi rotis, green moong dal, cucumber salad",
-          "parsedFoods": [
-            { "id": "food-1", "name": "2 ragi rotis", "portion": "small" },
-            { "id": "food-2", "name": "green moong dal", "portion": "medium" }
-          ],
-          "feeling": "light",
-          "symptoms": ["none"],
-          "note": "Ate early today"
-        },
-        "lunch": { "...": "..." },
-        "dinner": { "...": "..." },
-        "snacks": { "...": "..." }
-      }
-    }
-    ```
-  - **Errors**:
-    - `401` – not authenticated.
-    - `404` – no meals recorded for that date (frontend can treat as empty state).
+2. **Fetch meals for a given date (or range)**
+   - **Endpoint**: `GET /api/users/{userId}/meals?date=2025-12-23`
+   - **Purpose**: Hydrate the app on load with stored data instead of `localStorage`.
+   - **Response**:
+     - `200 OK` with:
+       ```json
+       {
+         "date": "2025-12-23",
+         "meals": { "...": "..." }
+       }
+       ```
+       or an empty structure if no data yet.
+   - **Error cases**:
+     - `400` invalid date format, `401`/`403` auth, `404` if user not found, `500` internal.
 
-- **`PUT /api/meals/today`**
-  - **Purpose**: Create or replace the user’s meals for a date (idempotent).
-  - **Request**:
-    - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`.
-    - Body:
-      ```json
-      {
-        "date": "2025-12-22",
-        "meals": { /* same shape as GET /api/meals/today response.meals */ }
-      }
-      ```
-  - **Response 200**:
-    ```json
-    { "status": "ok" }
-    ```
-  - **Errors**:
-    - `400` – invalid payload.
-    - `401` – not authenticated.
+3. **Smart defaults: get personalized meal suggestions**
+   - **Endpoint**: `GET /api/users/{userId}/meal-defaults?mealType=breakfast`
+   - **Purpose**: Fetch a mix of static and learned suggestions for a given meal type.
+   - **Response**:
+     - `200 OK` with:
+       ```json
+       {
+         "mealType": "breakfast",
+         "defaults": [
+           "2 ragi rotis, green moong dal, cucumber salad",
+           "Oats with milk and banana"
+         ]
+       }
+       ```
+   - **Error cases**:
+     - `400` invalid `mealType`, `401`/`403` auth, `500` internal.
 
-- **`GET /api/meals/history`**
-  - **Purpose**: (Future) Fetch a paginated list of past days with some summary stats.
-  - **Request**:
-    - Headers: `Authorization: Bearer <token>`
-    - Query params: `page`, `pageSize`, optional `fromDate`, `toDate`.
-  - **Response 200** (example shape):
-    ```json
-    {
-      "items": [
-        { "date": "2025-12-21", "summary": { "mealsLogged": 3, "symptoms": ["bloating"] } },
-        { "date": "2025-12-20", "summary": { "mealsLogged": 4, "symptoms": [] } }
-      ],
-      "page": 1,
-      "pageSize": 20,
-      "total": 42
-    }
-    ```
-  - **Errors**:
-    - `401` – not authenticated.
+4. **Smart defaults: record a selected/default meal**
+   - **Endpoint**: `POST /api/users/{userId}/meal-defaults`
+   - **Purpose**: Let the backend capture which defaults are picked, so it can learn and rank suggestions over time.
+   - **Request body**:
+     ```json
+     {
+       "mealType": "lunch",
+       "text": "2 ragi rotis, green moong dal, cucumber salad",
+       "source": "user"
+     }
+     ```
+   - **Response**:
+     - `201 Created` with default ID and any updated ordering or scores.
+   - **Error cases**:
+     - `400` invalid shape, `401`/`403` auth, `409` duplicate constraints, `500` internal.
 
-- **`GET /api/smart-defaults`**
-  - **Purpose**: Fetch user-specific smart defaults for each meal type.
-  - **Request**:
-    - Headers: `Authorization: Bearer <token>`
-  - **Response 200**:
-    ```json
-    {
-      "breakfast": [ "2 ragi rotis, green moong dal, cucumber salad", "Oats with milk and banana" ],
-      "lunch": [ "Rice, dal tadka, mixed vegetable curry" ],
-      "dinner": [ "Khichdi with ghee and curd" ],
-      "snacks": [ "Fruits (apple and banana)" ]
-    }
-    ```
-  - **Errors**:
-    - `401` – not authenticated.
+5. **Get symptoms & feeling taxonomy / metadata**
+   - **Endpoint**: `GET /api/meta/meal-experience`
+   - **Purpose**: Drive `feelingOptions`, `symptomOptions`, and `portionSizes` from backend-configured metadata instead of hardcoding.
+   - **Response**:
+     - `200 OK` with:
+       ```json
+       {
+         "feelings": [
+           { "value": "light", "label": "Light", "emoji": "😌" },
+           { "value": "okay", "label": "Okay", "emoji": "😐" },
+           { "value": "heavy", "label": "Heavy", "emoji": "😣" }
+         ],
+         "symptoms": [
+           { "value": "bloating", "label": "Bloating" },
+           { "value": "reflux", "label": "Reflux" },
+           { "value": "fatigue", "label": "Fatigue" },
+           { "value": "stool-change", "label": "Stool change" },
+           { "value": "none", "label": "None" }
+         ],
+         "portions": [
+           { "value": "small", "label": "Small", "icon": "🥄" },
+           { "value": "medium", "label": "Medium", "icon": "🍛" },
+           { "value": "large", "label": "Large", "icon": "🍽️" },
+           { "value": "skip", "label": "Skip", "icon": "⏭️" },
+           { "value": "no-idea", "label": "No idea", "icon": "🤷" }
+         ]
+       }
+       ```
+   - **Error cases**:
+     - `500` internal, optional `503` if configuration service unavailable.
 
-- **`POST /api/smart-defaults`**
-  - **Purpose**: Add a new smart default for a meal type.
-  - **Request**:
-    - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
-    - Body:
-    ```json
-    {
-      "mealType": "breakfast",
-      "text": "2 ragi rotis, green moong dal, cucumber salad"
-    }
-    ```
-  - **Response 201**:
-    ```json
-    { "status": "created" }
-    ```
-  - **Errors**:
-    - `400` – invalid payload (missing mealType or text).
-    - `401` – not authenticated.
+6. **Analytics-friendly export of meal logs**
+   - **Endpoint**: `GET /api/users/{userId}/meals/export?from=2025-12-01&to=2025-12-31`
+   - **Purpose**: Provide the nutrition/clinical team a normalized export for analysis or coaching.
+   - **Response**:
+     - `200 OK` with array of daily meal objects or CSV/NDJSON stream.
+   - **Error cases**:
+     - `400` invalid range, `401`/`403` auth, `413` if result too large, `500` internal.
 
 ---
 
