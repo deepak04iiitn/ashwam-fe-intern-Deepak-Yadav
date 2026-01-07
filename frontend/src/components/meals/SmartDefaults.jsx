@@ -5,7 +5,15 @@ import { smartDefaults as defaultSmartDefaults } from '../../utils/mockData';
 export default function SmartDefaults({ mealType, onSelect }) {
 
   const storedDefaults = loadSmartDefaults();
-  const defaults = storedDefaults[mealType] || defaultSmartDefaults[mealType] || [];
+  const defaultDefaults = defaultSmartDefaults[mealType] || [];
+  const storedMealDefaults = storedDefaults[mealType] || [];
+  
+  const mergedDefaults = [
+    ...storedMealDefaults,
+    ...defaultDefaults.filter(item => !storedMealDefaults.includes(item))
+  ];
+  
+  const defaults = mergedDefaults.length > 0 ? mergedDefaults : defaultDefaults;
   
   if(defaults.length === 0) return null;
   
