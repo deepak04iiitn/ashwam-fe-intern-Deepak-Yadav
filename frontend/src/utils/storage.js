@@ -79,7 +79,7 @@ export const updateSmartDefaults = (mealType, foodText) => {
   
   if(!mealDefaults.includes(foodText.trim())) {
     mealDefaults.unshift(foodText.trim());
-    defaults[mealType] = mealDefaults.slice(0, 10);
+    defaults[mealType] = mealDefaults.slice(0, 5);
     saveSmartDefaults(defaults);
   }
 

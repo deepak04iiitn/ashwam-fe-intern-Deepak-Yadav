@@ -1,13 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { getGreeting } from '../utils/mockData';
 import { initializeMealState, toggleMealExpansion, toggleMealSkipped, handleFoodInputChange, updateFoodPortion, setMealFeeling, toggleSymptom, updateMealNote } from '../utils/mealState';
-import { updateSmartDefaults } from '../utils/storage';
+import { updateSmartDefaults, loadMealsFromStorage } from '../utils/storage';
 import MealCard from '../components/meals/MealCard';
 import { mealTypes } from '../utils/mockData';
 
 export default function Meals() {
 
   const [meals, setMeals] = useState(() => initializeMealState());
+  
+  // Handle cross-tab synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      // Only react to changes in the meals storage key
+      if (e.key === 'nutrilog_meals' && e.newValue !== null) {
+        const updatedMeals = loadMealsFromStorage();
+        if (updatedMeals) {
+          setMeals(updatedMeals);
+        }
+      }
+    };
+
+    // Listen for storage events from other tabs/windows
+    window.addEventListener('storage', handleStorageChange);
+
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
   
   const handleToggleExpand = (mealType) => {
     setMeals(prev => toggleMealExpansion(prev, mealType));

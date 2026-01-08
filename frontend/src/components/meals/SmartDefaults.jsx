@@ -23,7 +23,7 @@ export default function SmartDefaults({ mealType, onSelect }) {
       <p className="text-xs text-gray-500 font-medium">Quick select:</p>
       <div className="flex flex-wrap gap-2">
         
-        {defaults.slice(0, 5).map((defaultText, index) => (
+        {defaults.map((defaultText, index) => (
           <button
             key={index}
             type="button"
